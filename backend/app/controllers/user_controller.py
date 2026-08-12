@@ -45,10 +45,7 @@ def delete_user(user_id: uuid.UUID, db: Session = Depends(get_db)):
 
 @router.post("/forgot-password")
 def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    # Security: Always return generic message to prevent email enumeration
-    # We query directly to check, but suppress the 404 error if not found.
-    from app.models.user import User
-    user = db.query(User).filter(User.email == req.email.strip().lower()).first()
-    if user:
+    user_service = UserService(db)
+    if user_service.check_user_exists(req.email):
         pass # In a real app, send email here.
     return {"message": "If an account with that email exists, a password reset link has been sent."}

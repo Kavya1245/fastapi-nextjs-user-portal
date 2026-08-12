@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/services/api";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import { rules } from "@/utils/validationRules";
 
 interface User { id: string; first_name: string; last_name: string; email: string; created_at?: string; }
 
@@ -10,8 +12,11 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editUser, setEditUser] = useState<User | null>(null);
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "" });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -37,13 +42,30 @@ export default function DashboardPage() {
   const openEditModal = () => {
     if (user) {
       setForm({ first_name: user.first_name, last_name: user.last_name, email: user.email });
+      setFormErrors({});
       setShowModal(true);
     }
   };
 
+  const validateForm = () => {
+    const e: Record<string, string> = {};
+    if (!form.first_name) e.first_name = "Required *";
+    else if (!new RegExp(rules.firstName.regex).test(form.first_name)) e.first_name = rules.firstName.message + " *";
+    
+    if (!form.last_name) e.last_name = "Required *";
+    else if (!new RegExp(rules.lastName.regex).test(form.last_name)) e.last_name = rules.lastName.message + " *";
+    
+    if (!form.email) e.email = "Required *";
+    else if (!new RegExp(rules.email.regex).test(form.email)) e.email = rules.email.message + " *";
+    
+    setFormErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !validateForm()) return;
+    
     try {
       await api.put(`/users/${user.id}`, { 
         first_name: form.first_name, 
@@ -52,21 +74,22 @@ export default function DashboardPage() {
       });
       setShowModal(false);
       fetchMyDetails();
-    } catch (err) { alert("Update failed. Check validation rules."); }
-  };
-
-  const handleDelete = async () => {
-    if (!user) return;
-    if (confirm("Are you sure you want to delete your account permanently? This action cannot be undone.")) {
-      try {
-        await api.delete(`/users/${user.id}`);
-        localStorage.removeItem("access_token");
-        router.push("/");
-      } catch (err) { alert("Failed to delete account."); }
+    } catch (err: any) { 
+      setFormErrors({ email: err.response?.data?.detail || "Update failed." });
     }
   };
 
-  const handleLogout = () => {
+  const handleDeleteConfirmed = async () => {
+    if (!user) return;
+    try {
+      await api.delete(`/users/${user.id}`);
+      localStorage.removeItem("access_token");
+      router.push("/");
+    } catch (err) { alert("Failed to delete account."); }
+    setShowDeleteConfirm(false);
+  };
+
+  const handleLogoutConfirmed = () => {
     localStorage.removeItem("access_token");
     router.push("/");
   };
@@ -80,7 +103,6 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       
-      {/* Top Navigation Bar */}
       <nav className="bg-white shadow-sm border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
@@ -91,7 +113,7 @@ export default function DashboardPage() {
               <span className="font-bold text-slate-800 text-lg">UserPortal</span>
             </div>
             <button 
-              onClick={handleLogout} 
+              onClick={() => setShowLogoutConfirm(true)} 
               className="flex items-center space-x-2 text-slate-600 hover:text-slate-900 font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -103,7 +125,6 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      {/* Main Content */}
       <main className="flex-1 p-4 sm:p-6 lg:p-10 flex justify-center">
         <div className="w-full max-w-4xl">
           
@@ -115,7 +136,6 @@ export default function DashboardPage() {
           {user && (
             <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
               
-              {/* Profile Banner */}
               <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-8 flex flex-col sm:flex-row justify-between sm:items-center">
                 <div className="text-white">
                   <h2 className="text-2xl font-bold capitalize">{user.first_name} {user.last_name}</h2>
@@ -132,7 +152,7 @@ export default function DashboardPage() {
                     Edit Profile
                   </button>
                   <button 
-                    onClick={handleDelete} 
+                    onClick={() => setShowDeleteConfirm(true)} 
                     className="inline-flex items-center justify-center bg-red-500/90 text-white border border-red-400 px-5 py-2.5 rounded-lg hover:bg-red-500 font-semibold transition-all"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 mr-2">
@@ -143,11 +163,9 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Profile Info */}
               <div className="px-8 py-8">
                 <h3 className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-4">Personal Information</h3>
                 
-                {/* Data Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex flex-col bg-slate-50 p-5 rounded-xl border border-slate-100">
                     <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">First Name</span>
@@ -167,10 +185,6 @@ export default function DashboardPage() {
                       {user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "N/A"}
                     </span>
                   </div>
-                  <div className="flex flex-col bg-slate-50 p-5 rounded-xl border border-slate-100 md:col-span-2">
-                    <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">User ID (UUID)</span>
-                    <span className="text-slate-500 font-mono text-sm mt-1 break-all select-all">{user.id}</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -178,7 +192,6 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* Edit User Modal */}
       {showModal && user && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
           <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl transform transition-all">
@@ -198,9 +211,9 @@ export default function DashboardPage() {
                     placeholder="John" 
                     value={form.first_name} 
                     onChange={(e) => setForm({...form, first_name: e.target.value})} 
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white outline-none transition-all" 
-                    required 
+                    className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white outline-none transition-all ${formErrors.first_name ? 'border-red-500' : 'border-slate-200'}`} 
                   />
+                  {formErrors.first_name && <p className="text-red-500 text-xs mt-1">{formErrors.first_name}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Last Name <span className="text-red-500">*</span></label>
@@ -208,9 +221,9 @@ export default function DashboardPage() {
                     placeholder="Doe" 
                     value={form.last_name} 
                     onChange={(e) => setForm({...form, last_name: e.target.value})} 
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white outline-none transition-all" 
-                    required 
+                    className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white outline-none transition-all ${formErrors.last_name ? 'border-red-500' : 'border-slate-200'}`} 
                   />
+                  {formErrors.last_name && <p className="text-red-500 text-xs mt-1">{formErrors.last_name}</p>}
                 </div>
               </div>
               <div>
@@ -220,9 +233,9 @@ export default function DashboardPage() {
                   placeholder="john@example.com" 
                   value={form.email} 
                   onChange={(e) => setForm({...form, email: e.target.value})} 
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white outline-none transition-all" 
-                  required 
+                  className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white outline-none transition-all ${formErrors.email ? 'border-red-500' : 'border-slate-200'}`} 
                 />
+                {formErrors.email && <p className="text-red-500 text-xs mt-1">{formErrors.email}</p>}
               </div>
               <div className="flex flex-col sm:flex-row-reverse gap-3 pt-4">
                 <button 
@@ -243,6 +256,22 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog 
+        isOpen={showLogoutConfirm}
+        title="Confirm Logout"
+        message="Are you sure you want to log out of your account?"
+        onConfirm={handleLogoutConfirmed}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
+      
+      <ConfirmDialog 
+        isOpen={showDeleteConfirm}
+        title="Delete Account"
+        message="Are you sure you want to delete your account permanently? This action cannot be undone."
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 }
