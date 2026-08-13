@@ -26,7 +26,7 @@ A secure, full-stack User Management System built with a strict MVC architecture
 - **Backend:** FastAPI, SQLAlchemy, Alembic, Pydantic V2, python-jose, bcrypt
 - **Database & Cache:** PostgreSQL, Redis
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Backend Setup
 
