@@ -23,9 +23,13 @@ class UserService:
             email=normalized_email,
             hashed_password=hashed_pw
         )
-        self.db.add(db_user)
-        self.db.commit()
-        self.db.refresh(db_user)
+        try:
+            self.db.add(db_user)
+            self.db.commit()
+            self.db.refresh(db_user)
+        except Exception:
+            self.db.rollback()
+            raise
         self.redis_service.clear_user_cache()
         return db_user
 
@@ -68,14 +72,22 @@ class UserService:
                 raise DuplicateEmailError("Email already in use")
             user.email = normalized_email
             
-        self.db.commit()
-        self.db.refresh(user)
+        try:
+            self.db.commit()
+            self.db.refresh(user)
+        except Exception:
+            self.db.rollback()
+            raise
         self.redis_service.clear_user_cache(user_id)
         return user
 
     def delete_user(self, user_id: str):
         user = self.get_user_by_id(user_id)
-        self.db.delete(user)
-        self.db.commit()
+        try:
+            self.db.delete(user)
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
         self.redis_service.clear_user_cache(user_id)
         return {"message": "User deleted successfully"}
