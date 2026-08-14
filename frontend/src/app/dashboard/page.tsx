@@ -31,7 +31,7 @@ export default function DashboardPage() {
       try {
         const res = await api.get("/users/me");
         setUser(res.data);
-      } catch (err) {
+      } catch {
         localStorage.removeItem("access_token");
         router.push("/");
       } finally {
@@ -80,8 +80,9 @@ export default function DashboardPage() {
       // Refresh data
       const res = await api.get("/users/me");
       setUser(res.data);
-    } catch (err: any) { 
-      setApiError(err.response?.data?.detail || "Update failed. Please try again.");
+    } catch (err: unknown) { 
+      const axiosErr = err as { response?: { data?: { detail?: string } } };
+      setApiError(axiosErr.response?.data?.detail || "Update failed. Please try again.");
     }
   };
 
@@ -91,7 +92,7 @@ export default function DashboardPage() {
       await api.delete(`/users/${user.id}`);
       localStorage.removeItem("access_token");
       router.push("/");
-    } catch (err) { 
+    } catch { 
       setApiError("Failed to delete account. Please try again."); 
     }
     setShowDeleteConfirm(false);

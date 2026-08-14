@@ -54,8 +54,9 @@ export default function SignupPage() {
       await api.post("/signup", form);
       setSuccessMsg("Signup successful! Redirecting to login...");
       setTimeout(() => router.push("/"), 1500);
-    } catch (err: any) {
-      setApiError(err.response?.data?.detail || "Signup failed");
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { detail?: string } } };
+      setApiError(axiosErr.response?.data?.detail || "Signup failed");
     }
   };
 

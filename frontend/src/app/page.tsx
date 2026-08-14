@@ -34,8 +34,9 @@ export default function LoginPage() {
       localStorage.setItem("access_token", res.data.access_token);
       setSuccessMsg("Login successful! Redirecting...");
       setTimeout(() => router.push("/dashboard"), 500);
-    } catch (err: any) {
-      setApiError(err.response?.data?.detail || "Login failed");
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { detail?: string } } };
+      setApiError(axiosErr.response?.data?.detail || "Login failed");
     }
   };
 

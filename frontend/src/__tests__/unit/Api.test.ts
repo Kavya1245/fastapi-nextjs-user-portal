@@ -1,6 +1,6 @@
 import api from '../../services/api';
 
-describe('API Service Interceptor (Unit)', => {
+describe('API Service Interceptor (Unit)', () => {
   beforeEach(() => {
     localStorage.clear();
   });
@@ -8,7 +8,6 @@ describe('API Service Interceptor (Unit)', => {
   it('attaches JWT token to headers if present in localStorage', () => {
     localStorage.setItem('access_token', 'fake-jwt-token');
     const config = { headers: {} } as any;
-    // Safely check if handlers exist and have the fulfilled function
     const handler = api.interceptors.request.handlers[0];
     if (handler && typeof handler.fulfilled === 'function') {
       const modifiedConfig = handler.fulfilled(config);

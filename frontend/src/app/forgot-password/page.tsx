@@ -12,7 +12,7 @@ export default function ForgotPasswordPage() {
     try {
       const res = await api.post("/forgot-password", { email });
       setMsg(res.data.message);
-    } catch (err: any) {
+    } catch {
       setMsg("If an account with that email exists, a password reset link has been sent.");
     }
   };
