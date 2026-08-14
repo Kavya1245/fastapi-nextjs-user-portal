@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.services.auth_service import AuthService
@@ -6,10 +7,11 @@ from app.services.redis_service import RedisService
 from app.exceptions import UserNotFoundError, DuplicateEmailError
 
 class UserService:
-    def __init__(self, db: Session):
+    # M-002 Fixed: Allow dependency injection for testability
+    def __init__(self, db: Session, auth_service: AuthService = None, redis_service: RedisService = None):
         self.db = db
-        self.auth_service = AuthService()
-        self.redis_service = RedisService()
+        self.auth_service = auth_service or AuthService()
+        self.redis_service = redis_service or RedisService()
 
     def register_user(self, user_data: UserCreate) -> User:
         normalized_email = user_data.email.strip().lower()
@@ -27,7 +29,7 @@ class UserService:
             self.db.add(db_user)
             self.db.commit()
             self.db.refresh(db_user)
-        except Exception:
+        except SQLAlchemyError: # M-010 Fixed: Catch specific DB errors
             self.db.rollback()
             raise
         self.redis_service.clear_user_cache()
@@ -39,17 +41,6 @@ class UserService:
         if not user or not self.auth_service.verify_password(password, user.hashed_password):
             return None
         return user
-
-    def get_all_users(self):
-        cache_key = "users:all"
-        cached = self.redis_service.get_cache(cache_key)
-        if cached:
-            return cached
-            
-        users = self.db.query(User).all()
-        result = [{"id": str(u.id), "first_name": u.first_name, "last_name": u.last_name, "email": u.email, "created_at": str(u.created_at)} for u in users]
-        self.redis_service.set_cache(cache_key, result)
-        return result
 
     def get_user_by_id(self, user_id: str) -> User:
         user = self.db.query(User).filter(User.id == user_id).first()
@@ -75,7 +66,7 @@ class UserService:
         try:
             self.db.commit()
             self.db.refresh(user)
-        except Exception:
+        except SQLAlchemyError: # M-010 Fixed
             self.db.rollback()
             raise
         self.redis_service.clear_user_cache(user_id)
@@ -86,8 +77,8 @@ class UserService:
         try:
             self.db.delete(user)
             self.db.commit()
-        except Exception:
+        except SQLAlchemyError: # M-010 Fixed
             self.db.rollback()
             raise
         self.redis_service.clear_user_cache(user_id)
-        return {"message": "User deleted successfully"}
+        return None # M-012 Fixed: Return None for 204 response

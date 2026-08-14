@@ -37,10 +37,7 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
 def get_my_profile(current_user: User = Depends(get_current_user)):
     return current_user
 
-@router.get("/users", response_model=list[UserResponse])
-def get_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    user_service = UserService(db)
-    return user_service.get_all_users()
+# C-003 Fixed: Removed public GET /api/users endpoint to prevent data exposure
 
 @router.put("/users/{user_id}", response_model=UserResponse)
 def update_user(
@@ -59,7 +56,8 @@ def update_user(
     except DuplicateEmailError as e:
         raise HTTPException(status_code=409, detail=str(e))
 
-@router.delete("/users/{user_id}")
+# M-012 Fixed: Changed DELETE to return 204 No Content
+@router.delete("/users/{user_id}", status_code=204)
 def delete_user(
     user_id: uuid.UUID, 
     db: Session = Depends(get_db), 
@@ -69,14 +67,15 @@ def delete_user(
         raise HTTPException(status_code=403, detail="Forbidden: You can only delete your own account.")
     user_service = UserService(db)
     try:
-        return user_service.delete_user(str(user_id))
+        user_service.delete_user(str(user_id))
     except UserNotFoundError:
         raise HTTPException(status_code=404, detail="User not found")
+    return None
 
 @router.post("/forgot-password")
 @limiter.limit("5/minute")
 def forgot_password(request: Request, req: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user_service = UserService(db)
     if user_service.check_user_exists(req.email):
-        pass # In a real app, send email here.
+        pass # H-001: Documented stub. Email integration (e.g., SendGrid) goes here.
     return {"message": "If an account with that email exists, a password reset link has been sent."}

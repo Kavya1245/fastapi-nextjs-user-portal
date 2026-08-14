@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "" });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [apiError, setApiError] = useState(""); // M-007 Fixed: Separate API error state
   
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -43,6 +44,7 @@ export default function DashboardPage() {
     if (user) {
       setForm({ first_name: user.first_name, last_name: user.last_name, email: user.email });
       setFormErrors({});
+      setApiError(""); // Clear errors on open
       setShowModal(true);
     }
   };
@@ -75,7 +77,8 @@ export default function DashboardPage() {
       setShowModal(false);
       fetchMyDetails();
     } catch (err: any) { 
-      setFormErrors({ email: err.response?.data?.detail || "Update failed." });
+      // M-007 Fixed: Use apiError state instead of mapping everything to email
+      setApiError(err.response?.data?.detail || "Update failed. Please try again.");
     }
   };
 
@@ -85,7 +88,10 @@ export default function DashboardPage() {
       await api.delete(`/users/${user.id}`);
       localStorage.removeItem("access_token");
       router.push("/");
-    } catch (err) { alert("Failed to delete account."); }
+    } catch (err) { 
+      // H-009 Fixed: Replaced alert() with apiError state
+      setApiError("Failed to delete account. Please try again."); 
+    }
     setShowDeleteConfirm(false);
   };
 
@@ -190,6 +196,7 @@ export default function DashboardPage() {
                 </svg>
               </button>
             </div>
+            {apiError && <div className="bg-red-100 text-red-700 p-2 mb-4 rounded text-sm">{apiError}</div>}
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -197,7 +204,7 @@ export default function DashboardPage() {
                   <input 
                     placeholder="John" 
                     value={form.first_name} 
-                    onChange={(e) => setForm({...form, first_name: sanitizeName(e.target.value)})} 
+                    onChange={(e) => setForm({...form, first_name: sanitizeName(e.target.value, rules.firstName.maxLength)})} 
                     className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white outline-none transition-all ${formErrors.first_name ? 'border-red-500' : 'border-slate-200'}`} 
                   />
                   {formErrors.first_name && <p className="text-red-500 text-xs mt-1">{formErrors.first_name}</p>}
@@ -207,7 +214,7 @@ export default function DashboardPage() {
                   <input 
                     placeholder="Doe" 
                     value={form.last_name} 
-                    onChange={(e) => setForm({...form, last_name: sanitizeName(e.target.value)})} 
+                    onChange={(e) => setForm({...form, last_name: sanitizeName(e.target.value, rules.lastName.maxLength)})} 
                     className={`w-full px-4 py-2.5 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white outline-none transition-all ${formErrors.last_name ? 'border-red-500' : 'border-slate-200'}`} 
                   />
                   {formErrors.last_name && <p className="text-red-500 text-xs mt-1">{formErrors.last_name}</p>}

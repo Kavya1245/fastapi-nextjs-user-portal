@@ -5,6 +5,7 @@ import Link from "next/link";
 import api from "@/services/api";
 import { rules } from "@/utils/validationRules";
 import PasswordStrengthMeter from "@/components/PasswordStrengthMeter";
+import { EyeIcon, EyeOffIcon } from "@/components/icons/EyeIcon";
 
 export default function SignupPage() {
   const router = useRouter();

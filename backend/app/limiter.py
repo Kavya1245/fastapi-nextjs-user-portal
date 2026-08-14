@@ -1,9 +1,8 @@
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from starlette.requests import Request
+from fastapi import Request
 
 def get_real_ip(request: Request) -> str:
-    # Check for X-Forwarded-For header (used by Render/Vercel proxies)
     forwarded_for = request.headers.get("X-Forwarded-For")
     if forwarded_for:
         return forwarded_for.split(",")[0].strip()

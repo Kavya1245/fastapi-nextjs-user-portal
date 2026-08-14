@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/services/api";
+import { EyeIcon, EyeOffIcon } from "@/components/icons/EyeIcon";
 import { rules } from "@/utils/validationRules";
 
 export default function LoginPage() {
