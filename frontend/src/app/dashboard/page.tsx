@@ -14,37 +14,39 @@ export default function DashboardPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "" });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [apiError, setApiError] = useState(""); // M-007 Fixed: Separate API error state
+  const [apiError, setApiError] = useState("");
   
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
+  // H-004 Fixed: Moved fetchMyDetails inside useEffect to fix Temporal Dead Zone
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (!token) {
       router.push("/");
       return;
     }
+    
+    const fetchMyDetails = async () => {
+      try {
+        const res = await api.get("/users/me");
+        setUser(res.data);
+      } catch (err) {
+        localStorage.removeItem("access_token");
+        router.push("/");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     fetchMyDetails();
   }, [router]);
-
-  const fetchMyDetails = async () => {
-    try {
-      const res = await api.get("/users/me");
-      setUser(res.data);
-    } catch (err) {
-      localStorage.removeItem("access_token");
-      router.push("/");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const openEditModal = () => {
     if (user) {
       setForm({ first_name: user.first_name, last_name: user.last_name, email: user.email });
       setFormErrors({});
-      setApiError(""); // Clear errors on open
+      setApiError("");
       setShowModal(true);
     }
   };
@@ -75,9 +77,10 @@ export default function DashboardPage() {
         email: form.email 
       });
       setShowModal(false);
-      fetchMyDetails();
+      // Refresh data
+      const res = await api.get("/users/me");
+      setUser(res.data);
     } catch (err: any) { 
-      // M-007 Fixed: Use apiError state instead of mapping everything to email
       setApiError(err.response?.data?.detail || "Update failed. Please try again.");
     }
   };
@@ -89,7 +92,6 @@ export default function DashboardPage() {
       localStorage.removeItem("access_token");
       router.push("/");
     } catch (err) { 
-      // H-009 Fixed: Replaced alert() with apiError state
       setApiError("Failed to delete account. Please try again."); 
     }
     setShowDeleteConfirm(false);

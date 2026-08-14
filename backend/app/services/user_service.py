@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.services.auth_service import AuthService
@@ -7,7 +7,6 @@ from app.services.redis_service import RedisService
 from app.exceptions import UserNotFoundError, DuplicateEmailError
 
 class UserService:
-    # M-002 Fixed: Allow dependency injection for testability
     def __init__(self, db: Session, auth_service: AuthService = None, redis_service: RedisService = None):
         self.db = db
         self.auth_service = auth_service or AuthService()
@@ -29,7 +28,10 @@ class UserService:
             self.db.add(db_user)
             self.db.commit()
             self.db.refresh(db_user)
-        except SQLAlchemyError: # M-010 Fixed: Catch specific DB errors
+        except IntegrityError: # H-003 Fixed: Catch concurrent race condition
+            self.db.rollback()
+            raise DuplicateEmailError("Email already registered")
+        except SQLAlchemyError:
             self.db.rollback()
             raise
         self.redis_service.clear_user_cache()
@@ -66,7 +68,10 @@ class UserService:
         try:
             self.db.commit()
             self.db.refresh(user)
-        except SQLAlchemyError: # M-010 Fixed
+        except IntegrityError: # H-003 Fixed: Catch concurrent race condition
+            self.db.rollback()
+            raise DuplicateEmailError("Email already in use")
+        except SQLAlchemyError:
             self.db.rollback()
             raise
         self.redis_service.clear_user_cache(user_id)
@@ -77,8 +82,8 @@ class UserService:
         try:
             self.db.delete(user)
             self.db.commit()
-        except SQLAlchemyError: # M-010 Fixed
+        except SQLAlchemyError:
             self.db.rollback()
             raise
         self.redis_service.clear_user_cache(user_id)
-        return None # M-012 Fixed: Return None for 204 response
+        return None
