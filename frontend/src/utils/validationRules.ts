@@ -21,3 +21,8 @@ export const rules = {
     message: "Invalid email format"
   }
 };
+
+export function sanitizeName(value: string): string {
+  let v = value.replace(/[^A-Za-z ]/g, "");
+  return v.startsWith(" ") ? v.trimStart() : v;
+}

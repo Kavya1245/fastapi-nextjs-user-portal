@@ -1,11 +1,9 @@
 import bcrypt
-from datetime import datetime, timedelta
-from jose import jwt
+from datetime import datetime, timezone, timedelta
+import jwt
 from app.config import settings
 
 class AuthService:
-    """Handles authentication logic using OOP principles."""
-    
     def __init__(self):
         self.secret_key = settings.SECRET_KEY
         self.algorithm = settings.ALGORITHM
@@ -24,6 +22,6 @@ class AuthService:
 
     def create_access_token(self, data: dict) -> str:
         to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(minutes=self.expire_minutes)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=self.expire_minutes)
         to_encode.update({"exp": expire})
         return jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)

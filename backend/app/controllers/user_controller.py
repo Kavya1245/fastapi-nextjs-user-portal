@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 import uuid
 from app.database import get_db
@@ -28,18 +28,31 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
 def get_my_profile(current_user: User = Depends(get_current_user)):
     return current_user
 
-@router.get("/users", response_model=list)
-def get_users(db: Session = Depends(get_db)):
+@router.get("/users", response_model=list[UserResponse])
+def get_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     user_service = UserService(db)
     return user_service.get_all_users()
 
 @router.put("/users/{user_id}", response_model=UserResponse)
-def update_user(user_id: uuid.UUID, user_data: UserUpdate, db: Session = Depends(get_db)):
+def update_user(
+    user_id: uuid.UUID, 
+    user_data: UserUpdate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    if str(current_user.id) != str(user_id):
+        raise HTTPException(status_code=403, detail="Forbidden: You can only update your own account.")
     user_service = UserService(db)
     return user_service.update_user(str(user_id), user_data)
 
 @router.delete("/users/{user_id}")
-def delete_user(user_id: uuid.UUID, db: Session = Depends(get_db)):
+def delete_user(
+    user_id: uuid.UUID, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    if str(current_user.id) != str(user_id):
+        raise HTTPException(status_code=403, detail="Forbidden: You can only delete your own account.")
     user_service = UserService(db)
     return user_service.delete_user(str(user_id))
 

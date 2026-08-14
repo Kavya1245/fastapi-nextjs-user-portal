@@ -9,6 +9,7 @@ env/
 # Node
 node_modules/
 .next/
+.swc/
 out/
 
 # OS

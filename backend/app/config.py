@@ -1,14 +1,14 @@
-import os
-from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-load_dotenv()
-
-class Settings:
-    DATABASE_URL: str = os.getenv("DATABASE_URL")
-    TEST_DATABASE_URL: str = os.getenv("TEST_DATABASE_URL")
-    REDIS_URL: str = os.getenv("REDIS_URL")
-    SECRET_KEY: str = os.getenv("SECRET_KEY")
-    ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    
+    DATABASE_URL: str
+    TEST_DATABASE_URL: str
+    REDIS_URL: str
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ALLOWED_ORIGINS: str = "http://localhost:3000"
 
 settings = Settings()
