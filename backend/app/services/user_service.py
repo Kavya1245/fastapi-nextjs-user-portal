@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.services.auth_service import AuthService
 from app.services.redis_service import RedisService
+from app.exceptions import UserNotFoundError, DuplicateEmailError
 
 class UserService:
     def __init__(self, db: Session):
@@ -14,7 +14,7 @@ class UserService:
     def register_user(self, user_data: UserCreate) -> User:
         normalized_email = user_data.email.strip().lower()
         if self.db.query(User).filter(User.email == normalized_email).first():
-            raise HTTPException(status_code=400, detail="Email already registered")
+            raise DuplicateEmailError("Email already registered")
         
         hashed_pw = self.auth_service.hash_password(user_data.password)
         db_user = User(
@@ -33,13 +33,14 @@ class UserService:
         normalized_email = email.strip().lower()
         user = self.db.query(User).filter(User.email == normalized_email).first()
         if not user or not self.auth_service.verify_password(password, user.hashed_password):
-            raise HTTPException(status_code=401, detail="Invalid email or password")
+            return None
         return user
 
     def get_all_users(self):
         cache_key = "users:all"
         cached = self.redis_service.get_cache(cache_key)
-        if cached: return cached
+        if cached:
+            return cached
             
         users = self.db.query(User).all()
         result = [{"id": str(u.id), "first_name": u.first_name, "last_name": u.last_name, "email": u.email, "created_at": str(u.created_at)} for u in users]
@@ -48,13 +49,8 @@ class UserService:
 
     def get_user_by_id(self, user_id: str) -> User:
         user = self.db.query(User).filter(User.id == user_id).first()
-        if not user: raise HTTPException(status_code=404, detail="User not found")
-        return user
-
-    def get_user_by_email(self, email: str) -> User:
-        normalized_email = email.strip().lower()
-        user = self.db.query(User).filter(User.email == normalized_email).first()
-        if not user: raise HTTPException(status_code=404, detail="User not found")
+        if not user:
+            raise UserNotFoundError(f"User {user_id} not found")
         return user
 
     def check_user_exists(self, email: str) -> bool:
@@ -63,12 +59,13 @@ class UserService:
 
     def update_user(self, user_id: str, user_data: UserUpdate) -> User:
         user = self.get_user_by_id(user_id)
+        
         if user_data.first_name is not None: user.first_name = user_data.first_name
         if user_data.last_name is not None: user.last_name = user_data.last_name
         if user_data.email is not None:
             normalized_email = user_data.email.strip().lower()
             if self.db.query(User).filter(User.email == normalized_email, User.id != user_id).first():
-                raise HTTPException(status_code=400, detail="Email already in use")
+                raise DuplicateEmailError("Email already in use")
             user.email = normalized_email
             
         self.db.commit()

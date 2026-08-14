@@ -8,6 +8,7 @@ from app.services.auth_service import AuthService
 from app.utils.dependencies import get_current_user
 from app.models.user import User
 from app.limiter import limiter
+from app.exceptions import UserNotFoundError, DuplicateEmailError
 
 router = APIRouter()
 
@@ -15,13 +16,18 @@ router = APIRouter()
 @limiter.limit("5/minute")
 def signup(request: Request, user: UserCreate, db: Session = Depends(get_db)):
     user_service = UserService(db)
-    return user_service.register_user(user)
+    try:
+        return user_service.register_user(user)
+    except DuplicateEmailError as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
 @router.post("/login", response_model=Token)
 @limiter.limit("10/minute")
 def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
     user_service = UserService(db)
     user = user_service.authenticate_user(credentials.email, credentials.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
     auth_service = AuthService()
     token_data = {"sub": user.email, "user_id": str(user.id)}
     token = auth_service.create_access_token(token_data)
@@ -46,7 +52,12 @@ def update_user(
     if str(current_user.id) != str(user_id):
         raise HTTPException(status_code=403, detail="Forbidden: You can only update your own account.")
     user_service = UserService(db)
-    return user_service.update_user(str(user_id), user_data)
+    try:
+        return user_service.update_user(str(user_id), user_data)
+    except UserNotFoundError:
+        raise HTTPException(status_code=404, detail="User not found")
+    except DuplicateEmailError as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
 @router.delete("/users/{user_id}")
 def delete_user(
@@ -57,7 +68,10 @@ def delete_user(
     if str(current_user.id) != str(user_id):
         raise HTTPException(status_code=403, detail="Forbidden: You can only delete your own account.")
     user_service = UserService(db)
-    return user_service.delete_user(str(user_id))
+    try:
+        return user_service.delete_user(str(user_id))
+    except UserNotFoundError:
+        raise HTTPException(status_code=404, detail="User not found")
 
 @router.post("/forgot-password")
 @limiter.limit("5/minute")
