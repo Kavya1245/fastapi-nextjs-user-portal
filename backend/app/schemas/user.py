@@ -53,6 +53,7 @@ class UserUpdate(BaseModel):
     @field_validator("first_name")
     def validate_first_name(cls, v):
         if v is not None:
+            if not v.strip(): raise ValueError("First name cannot be empty")
             if len(v) > VALIDATIONS["firstName"]["maxLength"]: raise ValueError(VALIDATIONS["firstName"]["message"])
             if not re.match(VALIDATIONS["firstName"]["regex"], v): raise ValueError(VALIDATIONS["firstName"]["message"])
         return v
@@ -60,6 +61,7 @@ class UserUpdate(BaseModel):
     @field_validator("last_name")
     def validate_last_name(cls, v):
         if v is not None:
+            if not v.strip(): raise ValueError("Last name cannot be empty")
             if len(v) > VALIDATIONS["lastName"]["maxLength"]: raise ValueError(VALIDATIONS["lastName"]["message"])
             if not re.match(VALIDATIONS["lastName"]["regex"], v): raise ValueError(VALIDATIONS["lastName"]["message"])
         return v

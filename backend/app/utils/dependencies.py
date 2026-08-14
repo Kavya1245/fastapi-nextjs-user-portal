@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.models.user import User
-from app.services.user_service import UserService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -24,7 +23,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     except InvalidTokenError:
         raise credentials_exception
         
-    user_service = UserService(db)
     user = db.query(User).filter(User.email == email).first()
     if user is None:
         raise credentials_exception
