@@ -63,9 +63,9 @@ class UserService:
 
     def update_user(self, user_id: str, user_data: UserUpdate) -> User:
         user = self.get_user_by_id(user_id)
-        if user_data.first_name: user.first_name = user_data.first_name
-        if user_data.last_name: user.last_name = user_data.last_name
-        if user_data.email:
+        if user_data.first_name is not None: user.first_name = user_data.first_name
+        if user_data.last_name is not None: user.last_name = user_data.last_name
+        if user_data.email is not None:
             normalized_email = user_data.email.strip().lower()
             if self.db.query(User).filter(User.email == normalized_email, User.id != user_id).first():
                 raise HTTPException(status_code=400, detail="Email already in use")
