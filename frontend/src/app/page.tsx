@@ -56,7 +56,7 @@ export default function LoginPage() {
             <div className="relative">
               <input type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)}
                 className={`w-full p-2 border rounded pr-10 ${errors.password ? 'border-red-500' : 'border-slate-300'}`} />
-              <button type="button" onClick={() => setShowPassword(!showPassword)}
+              <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword(!showPassword)}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-800 focus:outline-none">
                 {showPassword ? (
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">

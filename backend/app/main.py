@@ -1,15 +1,23 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import Base, engine
+from fastapi.responses import JSONResponse
 from app.routes.user_routes import api_router
 from app.config import settings
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
-Base.metadata.create_all(bind=engine)
+# Initialize Rate Limiter
+limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(title="User Management System")
 
-origins = settings.ALLOWED_ORIGINS.split(",")
+# Add Rate Limiter middleware
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Strict CORS
+origins = settings.ALLOWED_ORIGINS.split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

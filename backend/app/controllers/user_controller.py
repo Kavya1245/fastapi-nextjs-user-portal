@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 import uuid
 from app.database import get_db
@@ -7,16 +7,21 @@ from app.services.user_service import UserService
 from app.services.auth_service import AuthService
 from app.utils.dependencies import get_current_user
 from app.models.user import User
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 @router.post("/signup", response_model=UserResponse, status_code=201)
-def signup(user: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def signup(request: Request, user: UserCreate, db: Session = Depends(get_db)):
     user_service = UserService(db)
     return user_service.register_user(user)
 
 @router.post("/login", response_model=Token)
-def login(credentials: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
     user_service = UserService(db)
     user = user_service.authenticate_user(credentials.email, credentials.password)
     auth_service = AuthService()
@@ -57,7 +62,8 @@ def delete_user(
     return user_service.delete_user(str(user_id))
 
 @router.post("/forgot-password")
-def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def forgot_password(request: Request, req: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user_service = UserService(db)
     if user_service.check_user_exists(req.email):
         pass # In a real app, send email here.
