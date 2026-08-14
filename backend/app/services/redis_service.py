@@ -5,9 +5,14 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Module-level singleton Redis client.
+# This ensures all requests share a single, highly efficient connection pool
+# instead of creating a new pool on every HTTP request.
+_redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+
 class RedisService:
     def __init__(self):
-        self.redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        self.redis_client = _redis_client
         self.cache_ttl = 300
 
     def set_cache(self, key: str, value, ttl: int = None):
