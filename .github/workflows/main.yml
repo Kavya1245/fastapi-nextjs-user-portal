@@ -7,10 +7,17 @@ on:
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
+    env:
+      # Provide dummy env vars so Pydantic BaseSettings initializes during tests
+      DATABASE_URL: "postgresql://postgres:dummy@localhost:5432/dummydb"
+      REDIS_URL: "redis://localhost:6379/0"
+      SECRET_KEY: "ci-cd-super-secret-key-for-testing-1234567890"
+      TEST_DATABASE_URL: "sqlite:///./test.db"
+      ALLOWED_ORIGINS: "http://localhost:3000"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
@@ -26,9 +33,9 @@ jobs:
   frontend-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
       - name: Install dependencies
