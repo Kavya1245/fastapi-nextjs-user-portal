@@ -45,11 +45,14 @@ class UserService:
             return None
         return user
 
+    def get_user_by_email(self, email: str) -> User:
+        normalized_email = email.strip().lower()
+        user = self.db.query(User).filter(User.email == normalized_email).first()
+        if not user:
+            raise UserNotFoundError(f"User with email {email} not found")
+        return user
+
     def get_user_by_id(self, user_id: str) -> User:
-        # C-001 Fixed: Do not return cached dict as ORM object. 
-        # Always fetch from DB for mutations to ensure session attachment.
-        # Cache-aside is still used in the controller layer for GET /users/me if desired,
-        # but service layer must return a session-attached object.
         user = self.db.query(User).filter(User.id == user_id).first()
         if not user:
             raise UserNotFoundError(f"User {user_id} not found")

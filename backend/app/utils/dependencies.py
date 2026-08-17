@@ -8,6 +8,7 @@ from app.database import get_db
 from app.models.user import User
 from app.services.user_service import UserService
 from app.services.auth_service import AuthService
+from app.exceptions import UserNotFoundError
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -34,12 +35,13 @@ def get_current_user(
     except InvalidTokenError:
         raise credentials_exception
         
-    # M-002 Fixed: Use user_service to query DB instead of direct db.query
-    user = user_service.authenticate_user(email, "") # Pass empty password just to fetch user by email
-    # authenticate_user will return None because password is empty, so we fetch directly but via service
-    # Actually, better to just fetch directly from db to avoid password check logic:
-    db = user_service.db
-    user = db.query(User).filter(User.email == email).first()
-    if user is None:
+    # M-001 Fixed: Use user_service to fetch user by email
+    try:
+        # We use authenticate_user with empty password just to fetch the user by email
+        # This is a slight hack, but avoids adding a redundant method.
+        # A better approach is a dedicated get_user_by_email in the service.
+        # Let's add that to be perfectly clean.
+        user = user_service.get_user_by_email(email)
+        return user
+    except UserNotFoundError:
         raise credentials_exception
-    return user
