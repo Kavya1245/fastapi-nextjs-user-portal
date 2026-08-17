@@ -22,7 +22,7 @@ A secure, full-stack User Management System built with a strict MVC architecture
 
 ## 🛠 Tech Stack
 
-- **Frontend:** Next.js 14, React, Tailwind CSS, Axios, Jest
+- **Frontend:** Next.js 16, React, Tailwind CSS, Axios, Jest
 - **Backend:** FastAPI, SQLAlchemy, Alembic, Pydantic V2, PyJWT, bcrypt
 - **Database & Cache:** PostgreSQL, Redis
 
