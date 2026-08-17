@@ -58,6 +58,24 @@ class UserService:
             raise UserNotFoundError(f"User {user_id} not found")
         return user
 
+    # H-002 Fixed: DTO Read-Aside Cache for GET endpoints
+    def get_user_profile_dto(self, user_id: str) -> dict:
+        cache_key = f"profile:{user_id}"
+        cached = self.redis_service.get_cache(cache_key)
+        if cached:
+            return cached
+            
+        user = self.get_user_by_id(user_id)
+        user_data = {
+            "id": str(user.id),
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "created_at": str(user.created_at) if user.created_at else None
+        }
+        self.redis_service.set_cache(cache_key, user_data)
+        return user_data
+
     def check_user_exists(self, email: str) -> bool:
         normalized_email = email.strip().lower()
         return self.db.query(User).filter(User.email == normalized_email).first() is not None

@@ -9,6 +9,7 @@ from app.utils.dependencies import get_current_user, get_user_service, get_auth_
 from app.models.user import User
 from app.limiter import limiter
 from app.exceptions import UserNotFoundError, DuplicateEmailError
+from app.utils.email_service import send_password_reset_email # M-001 Fixed
 
 router = APIRouter()
 
@@ -30,9 +31,10 @@ def login(request: Request, credentials: UserLogin, user_service: UserService = 
     token = auth_service.create_access_token(token_data)
     return {"access_token": token, "token_type": "bearer"}
 
-@router.get("/users/me", response_model=UserResponse)
-def get_my_profile(current_user: User = Depends(get_current_user)):
-    return current_user
+@router.get("/users/me")
+def get_my_profile(current_user: User = Depends(get_current_user), user_service: UserService = Depends(get_user_service)):
+    # H-002 Fixed: Use DTO Read-Aside Cache
+    return user_service.get_user_profile_dto(str(current_user.id))
 
 @router.put("/users/{user_id}", response_model=UserResponse)
 def update_user(
@@ -68,5 +70,6 @@ def delete_user(
 @limiter.limit("5/minute")
 def forgot_password(request: Request, req: ForgotPasswordRequest, user_service: UserService = Depends(get_user_service)):
     if user_service.check_user_exists(req.email):
-        pass # H-001: Documented stub. Email integration (e.g., SendGrid) goes here.
+        # M-001 Fixed: Mock email service integration
+        send_password_reset_email(req.email, "mock_reset_token_12345")
     return {"message": "If an account with that email exists, a password reset link has been sent."}

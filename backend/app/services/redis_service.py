@@ -4,10 +4,6 @@ import redis
 from app.config import settings
 
 logger = logging.getLogger(__name__)
-
-# Module-level singleton Redis client.
-# This ensures all requests share a single, highly efficient connection pool
-# instead of creating a new pool on every HTTP request.
 _redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
 
 class RedisService:
@@ -39,6 +35,7 @@ class RedisService:
         try:
             if user_id:
                 self.delete_cache(f"user:{user_id}")
+                self.delete_cache(f"profile:{user_id}") # Clear DTO cache as well
             self.delete_cache("users:all")
         except Exception as e:
             logger.error("Redis clear error: %s", e, exc_info=True)

@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     ALLOWED_ORIGINS: str = "http://localhost:3000"
-    TEST_DATABASE_URL: str = "sqlite:///./test.db"
+    TEST_DATABASE_URL: str # L-001 Fixed: Removed SQLite fallback, require strict Postgres parity
 
     @field_validator("SECRET_KEY")
     def validate_secret_key_length(cls, v):
