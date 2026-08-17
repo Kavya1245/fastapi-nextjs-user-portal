@@ -5,7 +5,7 @@ from app.database import get_db
 from app.schemas.user import UserCreate, UserLogin, UserUpdate, UserResponse, Token, ForgotPasswordRequest
 from app.services.user_service import UserService
 from app.services.auth_service import AuthService
-from app.utils.dependencies import get_current_user, get_user_service
+from app.utils.dependencies import get_current_user, get_user_service, get_auth_service
 from app.models.user import User
 from app.limiter import limiter
 from app.exceptions import UserNotFoundError, DuplicateEmailError
@@ -22,11 +22,10 @@ def signup(request: Request, user: UserCreate, user_service: UserService = Depen
 
 @router.post("/login", response_model=Token)
 @limiter.limit("10/minute")
-def login(request: Request, credentials: UserLogin, user_service: UserService = Depends(get_user_service)):
+def login(request: Request, credentials: UserLogin, user_service: UserService = Depends(get_user_service), auth_service: AuthService = Depends(get_auth_service)):
     user = user_service.authenticate_user(credentials.email, credentials.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    auth_service = AuthService()
     token_data = {"sub": user.email, "user_id": str(user.id)}
     token = auth_service.create_access_token(token_data)
     return {"access_token": token, "token_type": "bearer"}
