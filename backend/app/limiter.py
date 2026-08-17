@@ -1,7 +1,6 @@
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from app.config import settings
 
-# Standard rate limiter. 
-# Note: For production behind a proxy, ensure your server (e.g., Uvicorn/Gunicorn) 
-# is configured to trust X-Forwarded-For headers so request.client.host is accurate.
-limiter = Limiter(key_func=get_remote_address)
+# H-003 Fixed: Use Redis for distributed rate limiting
+limiter = Limiter(key_func=get_remote_address, storage_uri=settings.REDIS_URL)

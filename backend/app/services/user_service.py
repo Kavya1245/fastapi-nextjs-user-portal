@@ -5,7 +5,7 @@ from app.schemas.user import UserCreate, UserUpdate
 from app.services.auth_service import AuthService
 from app.services.redis_service import RedisService
 from app.exceptions import UserNotFoundError, DuplicateEmailError
-import json
+import uuid
 
 class UserService:
     def __init__(self, db: Session, auth_service: AuthService = None, redis_service: RedisService = None):
@@ -46,28 +46,13 @@ class UserService:
         return user
 
     def get_user_by_id(self, user_id: str) -> User:
-        # H-002 Fixed: Implement Cache-Aside pattern
-        cache_key = f"user:{user_id}"
-        cached = self.redis_service.get_cache(cache_key)
-        if cached:
-            # Reconstruct a pseudo-user object from cache
-            return User(**cached)
-            
+        # C-001 Fixed: Do not return cached dict as ORM object. 
+        # Always fetch from DB for mutations to ensure session attachment.
+        # Cache-aside is still used in the controller layer for GET /users/me if desired,
+        # but service layer must return a session-attached object.
         user = self.db.query(User).filter(User.id == user_id).first()
         if not user:
             raise UserNotFoundError(f"User {user_id} not found")
-        
-        # Populate cache
-        user_data = {
-            "id": str(user.id),
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "email": user.email,
-            "hashed_password": user.hashed_password,
-            "created_at": str(user.created_at) if user.created_at else None,
-            "updated_at": str(user.updated_at) if user.updated_at else None
-        }
-        self.redis_service.set_cache(cache_key, user_data)
         return user
 
     def check_user_exists(self, email: str) -> bool:
